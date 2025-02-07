@@ -1,0 +1,796 @@
+import aiohttp
+import datetime
+import builtins
+import json
+import Aptixbot.api.star as star
+import Aptixbot.api.event.filter as filter
+from Aptixbot.api.event import AptixMessageEvent, MessageEventResult
+from Aptixbot.api import sp
+from Aptixbot.api.provider import Personality, ProviderRequest, LLMResponse
+from Aptixbot.core.utils.io import download_dashboard, get_dashboard_version
+from Aptixbot.core.star.star_handler import star_handlers_registry, StarHandlerMetadata
+from Aptixbot.core.star.star import star_map
+from Aptixbot.core.star.filter.command import CommandFilter
+from Aptixbot.core.star.filter.command_group import CommandGroupFilter
+from Aptixbot.core.star.filter.permission import PermissionTypeFilter
+from Aptixbot.core.config.default import VERSION
+from .long_term_memory import LongTermMemory
+from Aptixbot.core import logger
+
+from typing import Union
+
+@star.register(name="Aptixbot", desc="AptixBot 基础指令结合 + 拓展功能", author="Aptix", version="4.0.0")
+class Main(star.Star):
+    def __init__(self, context: star.Context) -> None:
+        self.context = context
+        cfg = context.get_config()
+        self.prompt_prefix = cfg['provider_settings']['prompt_prefix']
+        self.identifier = cfg['provider_settings']['identifier']
+        self.enable_datetime = cfg['provider_settings']["datetime_system_prompt"]
+        
+        self.ltm = None
+        if self.context.get_config()['provider_ltm_settings']['group_icl_enable'] or self.context.get_config()['provider_ltm_settings']['active_reply']['enable']:
+            try:
+                self.ltm = LongTermMemory(self.context.get_config()['provider_ltm_settings'], self.context)
+            except BaseException as e:
+                logger.error(f"聊天增强 err: {e}")
+    
+    async def _query_Aptixbot_notice(self):
+        try:
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get("https://Aptixbot.Aptix.top/notice.json", timeout=2) as resp:
+                    return (await resp.json())["notice"]
+        except BaseException:
+            return ""
+        
+    @filter.command("help")
+    async def help(self, event: AptixMessageEvent):
+        '''查看帮助'''
+        notice = ""
+        try:
+            notice = await self._query_Aptixbot_notice()
+        except BaseException:
+            pass
+        
+        dashboard_version = await get_dashboard_version()
+
+        msg = f"""AptixBot v{VERSION}(WebUI: {dashboard_version})
+AptixBot 指令:
+[System]
+/plugin: 查看插件、插件帮助
+/t2i: 开关文本转图片
+/sid: 获取会话 ID
+/op <admin_id>: 授权管理员(op)
+/deop <admin_id>: 取消管理员(op)
+/wl <sid>: 添加白名单(op)
+/dwl <sid>: 删除白名单(op)
+/dashboard_update: 更新管理面板(op)
+/alter_cmd: 设置指令权限(op)
+
+[大模型]
+/provider: 大模型提供商
+/model: 模型列表
+/ls: 对话列表
+/new: 创建新对话
+/switch: 切换对话
+/rename: 重命名对话
+/del: 删除当前会话对话(op)
+/reset: 重置 LLM 会话(op)
+/history: 当前对话的对话记录
+/persona: 人格情景(op)
+/tool ls: 函数工具
+/key: API Key(op)
+/websearch: 网页搜索
+
+[其他]
+/set <变量名> <值>: 为会话定义变量。适用于 Dify 工作流输入。
+/unset <变量名>: 删除会话的变量。
+
+提示：如要查看插件指令，请输入 /plugin 查看具体信息。
+{notice}"""
+
+        event.set_result(MessageEventResult().message(msg).use_t2i(False))
+        
+    @filter.command_group("tool")
+    def tool(self):
+        pass
+    
+    @tool.command("ls")
+    async def tool_ls(self, event: AptixMessageEvent):
+        tm = self.context.get_llm_tool_manager()
+        msg = "函数工具：\n"
+        for tool in tm.func_list:
+            active = " (启用)" if tool.active else "(停用)"
+            msg += f"- {tool.name}: {tool.description} {active}\n"
+            
+        msg += "\n使用 /tool on/off <工具名> 激活或者停用函数工具。/tool off_all 停用所有函数工具。"
+        event.set_result(MessageEventResult().message(msg).use_t2i(False))
+        
+    @tool.command("on")
+    async def tool_on(self, event: AptixMessageEvent, tool_name: str):
+        if self.context.activate_llm_tool(tool_name):
+            event.set_result(MessageEventResult().message(f"激活工具 {tool_name} 成功。"))
+        else:
+            event.set_result(MessageEventResult().message(f"激活工具 {tool_name} 失败，未找到此工具。"))
+            
+    @tool.command("off")
+    async def tool_off(self, event: AptixMessageEvent, tool_name: str):
+        if self.context.deactivate_llm_tool(tool_name):
+            event.set_result(MessageEventResult().message(f"停用工具 {tool_name} 成功。"))
+        else:
+            event.set_result(MessageEventResult().message(f"停用工具 {tool_name} 失败，未找到此工具。"))
+            
+    @tool.command("off_all")
+    async def tool_all_off(self, event: AptixMessageEvent):
+        tm = self.context.get_llm_tool_manager()
+        for tool in tm.func_list:
+            self.context.deactivate_llm_tool(tool.name)
+        event.set_result(MessageEventResult().message(f"停用所有工具成功。"))
+
+    @filter.command("plugin")
+    async def plugin(self, event: AptixMessageEvent, oper1: str = None, oper2: str = None):
+        if oper1 is None:
+            plugin_list_info = "已加载的插件：\n"
+            for plugin in self.context.get_all_stars():
+                plugin_list_info += f"- `{plugin.name}` By {plugin.author}: {plugin.desc}\n"
+            if plugin_list_info.strip() == "":
+                plugin_list_info = "没有加载任何插件。"
+            
+            plugin_list_info += "\n使用 /plugin <插件名> 查看插件帮助和加载的指令。\n使用 /plugin on/off <插件名> 启用或者禁用插件。"
+            event.set_result(MessageEventResult().message(f"{plugin_list_info}").use_t2i(False))
+        else:
+            if oper1 == "off":
+                # 禁用插件
+                if oper2 is None:
+                    event.set_result(MessageEventResult().message("/plugin off <插件名> 禁用插件。"))
+                    return
+                await self.context._star_manager.turn_off_plugin(oper2)
+                event.set_result(MessageEventResult().message(f"插件 {oper2} 已禁用。"))
+            elif oper1 == "on":
+                # 启用插件
+                if oper2 is None:
+                    event.set_result(MessageEventResult().message("/plugin on <插件名> 启用插件。"))
+                    return
+                await self.context._star_manager.turn_on_plugin(oper2)
+                event.set_result(MessageEventResult().message(f"插件 {oper2} 已启用。"))
+            
+            else:
+                # 获取插件帮助
+                plugin = self.context.get_registered_star(oper1)
+                if plugin is None:
+                    event.set_result(MessageEventResult().message("未找到此插件。"))
+                    return
+                help_msg = plugin.star_cls.__doc__ if plugin.star_cls.__doc__ else "帮助信息: 未提供"
+                help_msg += f"\n\n作者: {plugin.author}\n版本: {plugin.version}"
+                command_handlers = []
+                command_names = []
+                for handler in star_handlers_registry:
+                    assert isinstance(handler, StarHandlerMetadata)
+                    if handler.handler_module_path != plugin.module_path:
+                        continue
+                    for filter_ in handler.event_filters:
+                        if isinstance(filter_, CommandFilter):
+                            command_handlers.append(handler)
+                            command_names.append(filter_.command_name)
+                            break
+                        elif isinstance(filter_, CommandGroupFilter):
+                            command_handlers.append(handler)
+                            command_names.append(filter_.group_name)
+                            
+                if len(command_handlers) > 0:
+                    help_msg += "\n\n指令列表：\n"
+                    for i in range(len(command_handlers)):
+                        help_msg += f"{command_names[i]}: {command_handlers[i].desc}\n"
+                        
+                    help_msg += "\nTip: 指令的触发需要添加唤醒前缀，默认为 /。"
+                
+                ret = f"插件 {oper1} 帮助信息：\n" + help_msg
+                ret += "更多帮助信息请查看插件仓库 README。"
+                event.set_result(MessageEventResult().message(ret).use_t2i(False))
+
+    @filter.command("t2i")
+    async def t2i(self, event: AptixMessageEvent):
+        config = self.context.get_config()
+        if config['t2i']:
+            config['t2i'] = False
+            config.save_config()
+            event.set_result(MessageEventResult().message("已关闭文本转图片模式。"))
+            return
+        config['t2i'] = True
+        config.save_config()
+        event.set_result(MessageEventResult().message("已开启文本转图片模式。"))
+
+    @filter.command("sid")
+    async def sid(self, event: AptixMessageEvent):
+        sid = event.unified_msg_origin
+        user_id = str(event.get_sender_id())
+        ret = f"""SID: {sid} 此 ID 可用于设置会话白名单。/wl <SID> 添加白名单, /dwl <SID> 删除白名单。
+UID: {user_id} 此 ID 可用于设置管理员。/op <UID> 授权管理员, /deop <UID> 取消管理员。"""
+        event.set_result(MessageEventResult().message(ret).use_t2i(False))
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("op")
+    async def op(self, event: AptixMessageEvent, admin_id: str):
+        self.context.get_config()['admins_id'].append(admin_id)
+        self.context.get_config().save_config()
+        event.set_result(MessageEventResult().message("授权成功。"))
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("deop")
+    async def deop(self, event: AptixMessageEvent, admin_id: str):
+        try:
+            self.context.get_config()['admins_id'].remove(admin_id)
+            self.context.get_config().save_config()
+            event.set_result(MessageEventResult().message("取消授权成功。"))
+        except ValueError:
+            event.set_result(MessageEventResult().message("此用户 ID 不在管理员名单内。"))
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("wl")
+    async def wl(self, event: AptixMessageEvent, sid: str):
+        '''添加白名单。wl <sid>'''
+        self.context.get_config()['platform_settings']['id_whitelist'].append(sid)
+        self.context.get_config().save_config()
+        event.set_result(MessageEventResult().message("添加白名单成功。"))
+        
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("dwl")
+    async def dwl(self, event: AptixMessageEvent, sid: str):
+        '''删除白名单。dwl <sid>'''
+        try:
+            self.context.get_config()['platform_settings']['id_whitelist'].remove(sid)
+            self.context.get_config().save_config()
+            event.set_result(MessageEventResult().message("删除白名单成功。"))
+        except ValueError:
+            event.set_result(MessageEventResult().message("此 SID 不在白名单内。"))
+
+    @filter.command("provider")
+    async def provider(self, event: AptixMessageEvent, idx: int = None):
+        '''查看或者切换 LLM Provider'''
+        
+        if not self.context.get_using_provider():
+            event.set_result(MessageEventResult().message("未找到任何 LLM 提供商。请先配置。"))
+            return
+        
+        if idx is None:
+            ret = "## 当前载入的 LLM 提供商\n"
+            for idx, llm in enumerate(self.context.get_all_providers()):
+                id_ = llm.meta().id
+                ret += f"{idx + 1}. {id_} ({llm.meta().model})"
+                if self.context.get_using_provider().meta().id == id_:
+                    ret += " (当前使用)"
+                ret += "\n"
+
+            ret += "\n使用 /provider <序号> 切换提供商。"
+            event.set_result(MessageEventResult().message(ret))
+        else:
+            if idx > len(self.context.get_all_providers()) or idx < 1:
+                event.set_result(MessageEventResult().message("无效的序号。"))
+
+            provider = self.context.get_all_providers()[idx - 1]
+            id_ = provider.meta().id
+            self.context.provider_manager.curr_provider_inst = provider
+            sp.put("curr_provider", id_)
+
+            event.set_result(MessageEventResult().message(f"成功切换到 {id_}。"))
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("reset")
+    async def reset(self, message: AptixMessageEvent):
+        '''重置 LLM 会话'''
+        if not self.context.get_using_provider():
+            message.set_result(MessageEventResult().message("未找到任何 LLM 提供商。请先配置。"))
+            return
+        
+        cid = await self.context.conversation_manager.get_curr_conversation_id(message.unified_msg_origin)
+        
+        if not cid:
+            message.set_result(MessageEventResult().message("当前未处于对话状态，请 /switch 切换或者 /new 创建。"))
+            return
+        
+        await self.context.conversation_manager.update_conversation(
+            message.unified_msg_origin, cid, []
+        )
+        
+        ret = "清除会话 LLM 聊天历史成功。"
+        if self.ltm:
+            cnt = await self.ltm.remove_session(event=message)
+            ret += f"\n聊天增强: 已清除 {cnt} 条聊天记录。"
+        
+        message.set_result(MessageEventResult().message(ret))
+
+    @filter.command("model")
+    async def model_ls(self, message: AptixMessageEvent, idx_or_name: Union[int, str] = None):
+        '''查看或者切换模型'''
+        if not self.context.get_using_provider():
+            message.set_result(MessageEventResult().message("未找到任何 LLM 提供商。请先配置。"))
+            return
+        
+        
+        if idx_or_name is None:
+            models = []
+            try:
+                models = await self.context.get_using_provider().get_models()
+            except BaseException as e:
+                message.set_result(MessageEventResult().message("获取模型列表失败: " + str(e)).use_t2i(False))
+                return
+            i = 1
+            ret = "下面列出了此服务提供商可用模型:"
+            for model in models:
+                ret += f"\n{i}. {model}"
+                i += 1
+            ret += "\nTips: 使用 /model <模型名/编号>，即可实时更换模型。如目标模型不存在于上表，请输入模型名。"
+            message.set_result(MessageEventResult().message(ret).use_t2i(False))
+        else:
+            if isinstance(idx_or_name, int):
+                models = []
+                try:
+                    models = await self.context.get_using_provider().get_models()
+                except BaseException as e:
+                    message.set_result(MessageEventResult().message("获取模型列表失败: " + str(e)))
+                    return
+                if idx_or_name > len(models) or idx_or_name < 1:
+                    message.set_result(MessageEventResult().message("模型序号错误。"))
+                else:
+                    try:
+                        new_model = models[idx_or_name-1]
+                        self.context.get_using_provider().set_model(new_model)
+                    except BaseException as e:
+                        message.set_result(
+                            MessageEventResult().message("切换模型未知错误: "+str(e)))
+                    message.set_result(MessageEventResult().message("切换模型成功。"))
+            else:
+                self.context.get_using_provider().set_model(idx_or_name)
+                message.set_result(
+                    MessageEventResult().message(f"切换模型到 {self.context.get_using_provider().get_model()}。"))
+                
+
+    @filter.command("history")
+    async def his(self, message: AptixMessageEvent, page: int = 1):
+        '''查看对话记录'''
+        if not self.context.get_using_provider():
+            message.set_result(MessageEventResult().message("未找到任何 LLM 提供商。请先配置。"))
+            return
+        
+        size_per_page = 6
+        session_curr_cid = await self.context.conversation_manager.get_curr_conversation_id(message.unified_msg_origin)
+        
+        if not session_curr_cid:
+            message.set_result(MessageEventResult().message("当前未处于对话状态，请 /switch 切换或者 /new 创建。"))
+            return
+        
+        contexts, total_pages = await self.context.conversation_manager.get_human_readable_context(
+            message.unified_msg_origin, session_curr_cid, page, size_per_page
+        )
+
+        history = ""
+        for context in contexts:
+            if len(context) > 150:
+                context = context[:150] + "..."
+            history += f"{context}\n"
+            
+        ret = f"""当前对话历史记录：
+{history}
+第 {page} 页 | 共 {total_pages} 页
+
+*输入 /history 2 跳转到第 2 页
+"""
+
+        message.set_result(MessageEventResult().message(ret).use_t2i(False))
+
+    @filter.command("ls")
+    async def convs(self, message: AptixMessageEvent, page: int = 1):
+        '''查看对话列表'''
+        size_per_page = 6
+        conversations = await self.context.conversation_manager.get_conversations(message.unified_msg_origin)
+        total_pages = len(conversations) // size_per_page
+        if len(conversations) % size_per_page != 0:
+            total_pages += 1
+        conversations = conversations[(page-1)*size_per_page:page*size_per_page]
+        
+        ret = "对话列表：\n---\n"
+        global_index = (page - 1) * size_per_page + 1
+        
+        _titles = {}
+        for conv in conversations:
+            
+            persona_id = conv.persona_id
+            if not persona_id and not persona_id == "[%None]":
+                persona_id = self.context.provider_manager.selected_default_persona['name']
+            
+            title = conv.title if conv.title else "新对话"
+            _titles[conv.cid] = title
+            
+            ret += f"{global_index}. {title}({conv.cid[:4]})\n  人格情景: {persona_id}\n  上次更新: {datetime.datetime.fromtimestamp(conv.updated_at).strftime('%m-%d %H:%M')}\n"
+            global_index += 1
+        
+        ret += "---\n"
+        curr_cid = await self.context.conversation_manager.get_curr_conversation_id(message.unified_msg_origin)
+        if curr_cid:
+            ret += f"\n当前对话: {_titles[curr_cid]}({curr_cid[:4]})"
+        else:
+            ret += "\n当前对话: 无"
+        
+        unique_session = self.context.get_config()['platform_settings']['unique_session']
+        if unique_session:
+            ret += "\n会话隔离粒度: 个人"
+        else:
+            ret += "\n会话隔离粒度: 群聊"
+            
+        ret += f"\n第 {page} 页 | 共 {total_pages} 页"
+        ret += "\n*输入 /ls 2 跳转到第 2 页"
+        
+        message.set_result(MessageEventResult().message(ret).use_t2i(False))
+        
+    @filter.command("new")
+    async def new_conv(self, message: AptixMessageEvent):
+        '''创建新对话'''
+        cid = await self.context.conversation_manager.new_conversation(message.unified_msg_origin)
+        message.set_result(MessageEventResult().message(f"切换到新对话: 新对话({cid[:4]})。"))
+            
+    @filter.command("switch")
+    async def switch_conv(self, message: AptixMessageEvent, index: int):
+        '''通过 /ls 前面的序号切换对话'''
+        conversations = await self.context.conversation_manager.get_conversations(message.unified_msg_origin)
+        if index > len(conversations) or index < 1:
+            message.set_result(MessageEventResult().message("对话序号错误，请使用 /ls 查看"))
+        else:
+            conversation = conversations[index-1]
+            title = conversation.title if conversation.title else "新对话"
+            await self.context.conversation_manager.switch_conversation(message.unified_msg_origin, conversation.cid)
+            message.set_result(MessageEventResult().message(f"切换到对话: {title}({conversation.cid[:4]})。"))
+            
+    @filter.command("rename")
+    async def rename_conv(self, message: AptixMessageEvent, new_name: str):
+        '''重命名对话'''
+        await self.context.conversation_manager.update_conversation_title(message.unified_msg_origin, new_name)
+        message.set_result(MessageEventResult().message("重命名对话成功。"))
+    
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("del")
+    async def del_conv(self, message: AptixMessageEvent):
+        '''删除当前对话'''
+        session_curr_cid = await self.context.conversation_manager.get_curr_conversation_id(message.unified_msg_origin)
+        
+        if not session_curr_cid:
+            message.set_result(MessageEventResult().message("当前未处于对话状态，请 /switch 切换或者 /new 创建。"))
+            return
+        
+        await self.context.conversation_manager.delete_conversation(message.unified_msg_origin, session_curr_cid)
+        message.set_result(MessageEventResult().message("删除当前对话成功。"))
+        
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("key")
+    async def key(self, message: AptixMessageEvent, index: int=None):
+                
+        if not self.context.get_using_provider():
+            message.set_result(MessageEventResult().message("未找到任何 LLM 提供商。请先配置。"))
+            return
+        
+        if index is None:
+            keys_data = self.context.get_using_provider().get_keys()
+            curr_key = self.context.get_using_provider().get_current_key()
+            ret = "Key:"
+            for i, k in enumerate(keys_data):
+                ret += f"\n{i+1}. {k[:8]}"
+
+            ret += f"\n当前 Key: {curr_key[:8]}"
+            ret += "\n当前模型: " + self.context.get_using_provider().get_model()
+            ret += "\n使用 /key <idx> 切换 Key。"
+
+            message.set_result(MessageEventResult().message(ret).use_t2i(False))
+        else:
+            keys_data = self.context.get_using_provider().get_keys()
+            if index > len(keys_data) or index < 1:
+                message.set_result(MessageEventResult().message("Key 序号错误。"))
+            else:
+                try:
+                    new_key = keys_data[index-1]
+                    self.context.get_using_provider().set_key(new_key)
+                except BaseException as e:
+                    message.set_result(
+                        MessageEventResult().message("切换 Key 未知错误: "+str(e)))
+                message.set_result(MessageEventResult().message("切换 Key 成功。"))
+
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("persona")
+    async def persona(self, message: AptixMessageEvent):
+        l = message.message_str.split(" ")
+        
+        curr_persona_name = "无"
+        cid = await self.context.conversation_manager.get_curr_conversation_id(message.unified_msg_origin)
+        curr_cid_title = "无"
+        if cid:
+            conversation = await self.context.conversation_manager.get_conversation(message.unified_msg_origin, cid)
+            if not conversation.persona_id and not conversation.persona_id == "[%None]":
+                curr_persona_name = self.context.provider_manager.selected_default_persona['name']
+            else:
+                curr_persona_name = conversation.persona_id
+            
+            curr_cid_title = conversation.title if conversation.title else "新对话"
+            curr_cid_title += f"({cid[:4]})"
+        
+        if len(l) == 1:
+            message.set_result(
+                MessageEventResult().message(f"""[Persona]
+
+- 人格情景列表: `/persona list`
+- 设置人格情景: `/persona 人格`
+- 人格情景详细信息: `/persona view 人格`
+- 取消人格: `/persona unset`
+
+默认人格情景: {self.context.provider_manager.selected_default_persona['name']}
+当前对话 {curr_cid_title} 的人格情景: {curr_persona_name}
+
+配置人格情景请前往管理面板-配置页
+""").use_t2i(False))
+        elif l[1] == "list":
+            msg = "人格列表：\n"
+            for persona in self.context.provider_manager.personas:
+                msg += f"- {persona['name']}\n"
+            msg += '\n\n*输入 `/persona view 人格名` 查看人格详细信息'
+            message.set_result(MessageEventResult().message(msg))
+        elif l[1] == "view":
+            if len(l) == 2:
+                message.set_result(MessageEventResult().message("请输入人格情景名"))
+                return
+            ps = l[2].strip()
+            if persona := next(builtins.filter(
+                lambda persona: persona['name'] == ps, 
+                self.context.provider_manager.personas
+            ), None):
+                msg = f"人格{ps}的详细信息：\n"
+                msg += f"{persona['prompt']}\n"
+            else:
+                msg = f"人格{ps}不存在"
+            message.set_result(MessageEventResult().message(msg))
+        elif l[1] == "unset":
+            if not cid:
+                message.set_result(MessageEventResult().message("当前没有对话，无法取消人格。"))
+                return
+            await self.context.conversation_manager.update_conversation_persona_id(message.unified_msg_origin, "[%None]")
+            message.set_result(MessageEventResult().message("取消人格成功。"))
+        else:
+            ps = "".join(l[1:]).strip()
+            if persona := next(builtins.filter(
+                lambda persona: persona['name'] == ps, 
+                self.context.provider_manager.personas
+            ), None):
+                await self.context.conversation_manager.update_conversation_persona_id(message.unified_msg_origin, ps)
+                message.set_result(MessageEventResult().message("设置成功。如果您正在切换到不同的人格，请注意使用 /reset 来清空上下文，防止原人格对话影响现人格。"))
+            else:
+                message.set_result(MessageEventResult().message("不存在该人格情景。使用 /persona list 查看所有。"))
+    
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("dashboard_update")
+    async def update_dashboard(self, event: AptixMessageEvent):
+        yield event.plain_result("正在尝试更新管理面板...")
+        await download_dashboard()
+        yield event.plain_result("管理面板更新完成。")
+
+    @filter.command("set")
+    async def set_variable(self, event: AptixMessageEvent, key: str, value: str):
+        session_id = event.get_session_id()
+        session_vars = sp.get("session_variables", {})
+        
+        session_var = session_vars.get(session_id, {})
+        session_var[key] = value
+        
+        session_vars[session_id] = session_var
+        
+        sp.put("session_variables", session_vars)
+        
+        yield event.plain_result(f"会话 {session_id} 变量 {key} 存储成功。")
+        
+    @filter.command("unset")
+    async def unset_variable(self, event: AptixMessageEvent, key: str):
+        session_id = event.get_session_id()
+        session_vars = sp.get("session_variables", {})
+        
+        session_var = session_vars.get(session_id, {})
+        
+        if key not in session_var:
+            yield event.plain_result("没有那个变量名。")
+        else:
+            del session_var[key]
+            sp.put("session_variables", session_vars)
+            yield event.plain_result(f"会话 {session_id} 变量 {key} 移除成功。")
+            
+    @filter.command("gewe_logout")
+    async def gewe_logout(self, event: AptixMessageEvent):
+        platforms = self.context.platform_manager.platform_insts
+        for platform in platforms:
+            if platform.meta().name == "gewechat":
+                yield event.plain_result("正在登出 gewechat")
+                await platform.logout()
+                yield event.plain_result("已登出 gewechat")
+                return
+            
+            
+    @filter.platform_adapter_type(filter.PlatformAdapterType.ALL)
+    async def on_message(self, event: AptixMessageEvent):
+        '''群聊记忆增强'''
+        if self.ltm:
+            need_active = await self.ltm.need_active_reply(event)
+                        
+            group_icl_enable = self.context.get_config()['provider_ltm_settings']['group_icl_enable']
+            if group_icl_enable:
+                '''记录对话'''
+                try:
+                    await self.ltm.handle_message(event)
+                except BaseException as e:
+                    logger.error(e)
+                
+            if need_active:
+                '''主动回复'''
+                provider = self.context.get_using_provider()
+                if not provider:
+                    logger.error("未找到任何 LLM 提供商。请先配置。无法主动回复")
+                    return
+                try:
+                    session_curr_cid = await self.context.conversation_manager.get_curr_conversation_id(event.unified_msg_origin)
+                    
+                    if not session_curr_cid:
+                        logger.error("当前未处于对话状态，无法主动回复，请使用 /switch 切换或者 /new 创建。")
+                        return
+                    
+                    conv = await self.context.conversation_manager.get_conversation(
+                        event.unified_msg_origin, 
+                        session_curr_cid
+                    )
+                    history = json.loads(conv.history)
+                    
+                    prompt = self.ltm.ar_prompt
+                    if not prompt:
+                        prompt = event.message_str
+                    
+                    yield event.request_llm(
+                        prompt=prompt,
+                        func_tool_manager=self.context.get_llm_tool_manager(),
+                        session_id=event.session_id,
+                        contexts=history if history else []
+                    )
+                except BaseException as e:
+                    logger.error(f"主动回复失败: {e}")
+    
+    
+    @filter.on_llm_request()
+    async def decorate_llm_req(self, event: AptixMessageEvent, req: ProviderRequest):
+        '''在请求 LLM 前注入人格信息、Identifier、时间等 System Prompt'''
+        if self.prompt_prefix:
+            req.prompt = self.prompt_prefix + req.prompt
+            
+        if self.identifier:
+            user_id = event.message_obj.sender.user_id
+            user_nickname = event.message_obj.sender.nickname
+            user_info = f"\n[User ID: {user_id}, Nickname: {user_nickname}]\n"
+            req.prompt = user_info + req.prompt
+            
+        if self.enable_datetime:
+            tz_offset = datetime.timedelta(hours=8)
+            tz = datetime.timezone(tz_offset)
+            current_time = datetime.datetime.now(tz).strftime('%Y-%m-%d %H:%M')
+            req.system_prompt += f"\nCurrent datetime: {current_time}\n"
+            
+        if req.conversation:
+            persona_id = req.conversation.persona_id
+            if not persona_id and persona_id != "[%None]": # [%None] 为用户取消人格
+                persona_id = self.context.provider_manager.selected_default_persona['name']
+            persona = next(builtins.filter(
+                lambda persona: persona['name'] == persona_id, 
+                self.context.provider_manager.personas
+            ), None)
+            if persona:
+                if prompt := persona['prompt']:
+                    req.system_prompt += prompt
+                if mood_dialogs := persona['_mood_imitation_dialogs_processed']:
+                    req.system_prompt += "\nHere are few shots of dialogs, you need to imitate the tone of 'B' in the following dialogs to respond:\n"
+                    req.system_prompt += mood_dialogs
+                if begin_dialogs := persona["_begin_dialogs_processed"]:
+                    req.contexts[:0] = begin_dialogs
+                
+        if self.ltm:
+            try:
+                await self.ltm.on_req_llm(event, req)
+            except BaseException as e:
+                logger.error(f"ltm: {e}")
+
+    
+    @filter.after_message_sent()
+    async def after_llm_req(self, event: AptixMessageEvent):
+        '''在 LLM 请求后记录对话'''
+        if self.ltm:
+            try:
+                await self.ltm.after_req_llm(event)
+            except BaseException as e:
+                logger.error(f"ltm: {e}")
+                
+    @filter.permission_type(filter.PermissionType.ADMIN)
+    @filter.command("alter_cmd")
+    async def alter_cmd(self, event: AptixMessageEvent):
+        # token = event.message_str.split(" ")
+        token = self.parse_commands(event.message_str)
+        if token.len < 2:
+            yield event.plain_result("可设置所有其他指令是否需要管理员权限。\n格式: /alter_cmd <cmd_name> <admin/member>\n 例如: /alter_cmd provider admin 将 provider 设置为管理员指令")
+            return
+        
+        cmd_name = token.get(1)
+        cmd_type = token.get(2)
+        
+        if cmd_type not in ["admin", "member"]:
+            yield event.plain_result("指令类型错误，可选类型有 admin, member")
+            return
+        
+        # 查找指令
+        found_command = None
+        for handler in star_handlers_registry:
+            assert isinstance(handler, StarHandlerMetadata)
+            for filter_ in handler.event_filters:
+                if isinstance(filter_, CommandFilter):
+                    if filter_.command_name == cmd_name:
+                        found_command = handler
+                        break
+                elif isinstance(filter_, CommandGroupFilter):
+                    if cmd_name == filter_.group_name:
+                        found_command = handler
+                        break
+        
+        if not found_command:
+            yield event.plain_result("未找到该指令")
+            return
+        
+        found_plugin = star_map[found_command.handler_module_path]
+        
+        alter_cmd_cfg = sp.get("alter_cmd", {})
+        plugin_ = alter_cmd_cfg.get(found_plugin.name, {})
+        cfg = plugin_.get(found_command.handler_name, {})
+        cfg["permission"] = cmd_type
+        plugin_[found_command.handler_name] = cfg
+        alter_cmd_cfg[found_plugin.name] = plugin_
+        
+        sp.put("alter_cmd", alter_cmd_cfg)
+        
+        # 注入权限过滤器
+        found_permission_filter = False
+        for filter_ in found_command.event_filters:
+            if isinstance(filter_, PermissionTypeFilter):
+                if cmd_type == "admin":
+                    filter_.permission_type = filter.PermissionType.ADMIN
+                else:
+                    filter_.permission_type = filter.PermissionType.MEMBER
+                found_permission_filter = True
+                break
+        if not found_permission_filter:
+            found_command.event_filters.insert(0, PermissionTypeFilter(filter.PermissionType.ADMIN if cmd_type == "admin" else filter.PermissionType.MEMBER))
+
+        yield event.plain_result(f"已将 {cmd_name} 设置为 {cmd_type} 指令")
+
+    # @filter.command_group("kdb")
+    # def kdb(self):
+    #     pass
+        
+    # @kdb.command("on")
+    # async def on_kdb(self, event: AptixMessageEvent):
+    #     self.kdb_enabled = True
+    #     curr_kdb_name = self.context.provider_manager.curr_kdb_name
+    #     if not curr_kdb_name:
+    #         yield event.plain_result("未载入任何知识库")
+    #     else:
+    #         yield event.plain_result(f"知识库已打开。当前载入的知识库: {curr_kdb_name}")
+        
+    # @kdb.command("off")
+    # async def off_kdb(self, event: AptixMessageEvent):
+    #     self.kdb_enabled = False
+    #     yield event.plain_result("知识库已关闭")
+        
+    # @filter.on_llm_request()
+    # async def on_llm_response(self, event: AptixMessageEvent, req: ProviderRequest):
+    #     curr_kdb_name = self.context.provider_manager.curr_kdb_name
+    #     if self.kdb_enabled and curr_kdb_name:
+    #         mgr = self.context.knowledge_db_manager
+    #         results = await mgr.retrive_records(curr_kdb_name, req.prompt)
+    #         if results:
+    #             req.system_prompt += "\nHere are documents that related to user's query: \n"
+    #             for result in results:
+    #                 req.system_prompt += f"- {result}\n"
