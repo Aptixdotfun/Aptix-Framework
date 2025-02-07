@@ -1,16 +1,20 @@
-FROM node:16
+FROM python:3.10-slim
+WORKDIR /AptixBot
 
-WORKDIR /usr/src/app
+COPY . /AptixBot/
 
-COPY package*.json ./
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    build-essential \
+    python3-dev \
+    libffi-dev \
+    libssl-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN npm install --production
+RUN python -m pip install -r requirements.txt
 
+EXPOSE 6185 
+EXPOSE 6186
 
-COPY . .
-
-ENV PORT=8080
-
-EXPOSE 8080
-
-CMD ["node", "backend/api/server.js"]
+CMD [ "python", "main.py" ]
