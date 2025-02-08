@@ -2,7 +2,7 @@
 ![Logo](https://media.discordapp.net/attachments/1333920253532569601/1333988510171926589/shdfghfdsg.png?ex=679ae51d&is=6799939d&hm=e805844208deab7a242184f9433c19bb280fd793857d6fe44c1f5441cde5a2cc&=&format=webp&quality=lossless)
 
 # AptixAI Agent Framework
-##### The Aptix Framework open-source code allows users to create AI agents directly in their CLI, with Qude acting as a co-pilot to help build them. The Qude API enables interaction with the AI agents created using the Qude Framework's open-source code.
+##### The Aptix Framework open-source code allows users to create AI agents directly in their CLI, with Aptixbot acting as a co-pilot to help build them. The Aptix API enables interaction with the AI agents created using the Aptix Framework's open-source code.
 
 ### 🌟 Key Features
 - Agent Deployment: Deploy custom AI agents onto the Solana blockchain.
