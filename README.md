@@ -2,7 +2,7 @@
 ![Logo](https://media.discordapp.net/attachments/1333920253532569601/1333988510171926589/shdfghfdsg.png?ex=679ae51d&is=6799939d&hm=e805844208deab7a242184f9433c19bb280fd793857d6fe44c1f5441cde5a2cc&=&format=webp&quality=lossless)
 
 # AptixAI Agent Framework
-##### The Qude Framework open-source code allows users to create AI agents directly in their CLI, with Qude acting as a co-pilot to help build them. The Qude API enables interaction with the AI agents created using the Qude Framework's open-source code.
+##### The Aptix Framework open-source code allows users to create AI agents directly in their CLI, with Qude acting as a co-pilot to help build them. The Qude API enables interaction with the AI agents created using the Qude Framework's open-source code.
 
 ### 🌟 Key Features
 - Agent Deployment: Deploy custom AI agents onto the Solana blockchain.
@@ -28,8 +28,8 @@
 ### Installation 
 1. Clone the repository
 ``` bash 
-git clone https://github.com/qudeai/qudeai-framework-v.1.git
-cd qudeai-framework-v.1
+git clone https://github.com/aptixdotfun/aptix-framework.git
+cd aptix-framework
 ```
 2. Install dependencies:
 ``` bash
@@ -51,11 +51,11 @@ npm run build
 ## 📜 Available Commands
 1. Ask Queries to an Agent:
 ```bash
-npm run askqude {agentName} {yourQuestion}
+npm run askaptixbot {agentName} {yourQuestion}
 ```
    - example
    ```bash
-   npm run askqude Aura "What is the market cap of Solana?"
+   npm run askaptixbot Aura "What is the market cap of Solana?"
 ```
 2. Deploy an Agent or Token:
 - Go to defineAgent.ts and replace placeholders as you want. 
@@ -64,49 +64,49 @@ npm run askqude {agentName} {yourQuestion}
 npm run build 
 ```
 ```bash
-npm run deployqude
+npm run deployaptixbot
 ```
 - Deploys a new agent or token to the Solana blockchain.
 
 3. Interact with an Agent:
 ```bash
-npm run interactqude {agent_name} ask "Your question"
+npm run interactaptixbot {agent_name} ask "Your question"
 ```
 - Example 
 ```bash
-npm run interactqude Aura ask "Trending token 24h"
+npm run interactaptixbot Aura ask "Trending token 24h"
 ```
 4. Fetch Trending Tokens:
 ```bash 
-npm run interactqude Aura ask "Trending token 24h"
+npm run interactaptixbot Aura ask "Trending token 24h"
 ```
 5. Fetch Top Token Holders:
 ```bash
-npm run interactqude Aura ask "Top holders: {mintAddress}"
+npm run interactaptixbot Aura ask "Top holders: {mintAddress}"
 ```
 - Example 
 ```bash
-npm run interactqude Aura ask "Top holders: 6LKbpcg2fQ84Ay3kKXVyo3bHUGe3s36g9EVbKYSupump"
+npm run interactaptixbot Aura ask "Top holders: 6LKbpcg2fQ84Ay3kKXVyo3bHUGe3s36g9EVbKYSupump"
 ```
 6. Fetch Market Cap Data:
 ```bash
-npm run interactqude Aura ask "Marketcap count:{count} term:\"{term}\""
+npm run interactaptixbot Aura ask "Marketcap count:{count} term:\"{term}\""
 ``` 
 - Example
 ```bash
-npm run interactqude Aura ask "Marketcap count:50 term:\"pump\""
+npm run interactaptixbot Aura ask "Marketcap count:50 term:\"pump\""
 ```
 7. Fetch First Top Buyers:
 ```bash
-npm run interactqude {agentName} ask "First top {count} buyers for: {mintAddress}"
+npm run interactaptixbot {agentName} ask "First top {count} buyers for: {mintAddress}"
 ```
 - Example 
 ```bash 
-npm run interactqude Aura ask "First top 10 buyers for: 6LKbpcg2fQ84Ay3kKXVyo3bHUGe3s36g9EVbKYSupump"
+npm run interactaptixbot Aura ask "First top 10 buyers for: 6LKbpcg2fQ84Ay3kKXVyo3bHUGe3s36g9EVbKYSupump"
 ```
 8. Trade tokens
 ```bash 
-npm run qude-trade {agent_name}
+npm run aptixbot-trade {agent_name}
 ```
 ## Dependencies
 
@@ -148,103 +148,3 @@ The project utilizes the following development dependencies:
 - Bitquery Integration: Fetches real-time and historical blockchain data for queries.
 - Command Parsing: Processes user commands to route them to the appropriate functionality.
 - Customizable Framework: Modify or extend the framework to suit your specific needs.
-
-# USING api.qude.ai API
-
-## Prerequisites
-
-To use the API, ensure you have the following:
-
-1. **API Access**: The API is publicly available at [api.qude.ai](https://api.qude.ai).
-2. **API Client**: Use a tool like `curl`, Postman, or any HTTP client library in your preferred programming language.
-
----
-
-## API Endpoints
-
-### 1. Fetch Agent Details
-Retrieve metadata about an agent from the official Qude Framework database.
-
-**GET** `/api/agent/:name`
-
-#### Request Example:
-```bash
-curl https://api.qude.ai/api/agent/Aura
-```
-**Response Example:**
-```bash
-{
-  "name": "Aura",
-  "description": "An intelligent agent designed to assist with tasks.",
-  "createdAt": "2025-01-01T12:00:00Z"
-}
-```
-#### 2. Interact with an Agent (GET Method)
-Send a message to an agent and receive an AI-generated response using query parameters.
-
-**GET** `/api/agent/:name/interact?message=YourMessage`
-
-**Request Example:**
-```bash
-curl "https://api.qude.ai/api/agent/Aura/interact?message=Hello!"
-```
-**Response Example:**
-```bash
-{
-  "agent": "Aura",
-  "reply": "Hello! How can I assist you today?"
-}
-```
-#### 3. Interact with an Agent (POST Method)
-Send a message to an agent and receive an AI-generated response using a JSON payload.
-
-**POST** `/api/agent/:name/interact`
-
-**Request Example:**
-```bash
-curl -X POST "https://api.qude.ai/api/agent/Aura/interact" \
--H "Content-Type: application/json" \
--d '{"message": "Hello, Aura"}'
-```
-**Response Example:**
-```bash
-{
-  "agent": "Aura",
-  "reply": "Hey, how can i help you?"
-}
-```
-## Example Usage in Node.js
-Here’s how you can interact with the API programmatically:
-```bash
-const fetch = require("node-fetch");
-
-async function interactWithAgent(agentName, message) {
-  const response = await fetch(`https://api.qude.ai/api/agent/${agentName}/interact`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
-  });
-
-  if (!response.ok) {
-    console.error("Failed to interact with the agent:", response.statusText);
-    return;
-  }
-
-  const data = await response.json();
-  console.log("Agent Reply:", data.reply);
-}
-
-interactWithAgent("Aura", "Hello there!");
-```
-
-## Notes for api.qude.ai
-- No Local Setup Required: This API is fully hosted and ready to use—no Firebase setup or service account keys needed.
-- Agent Metadata: All agent information is sourced directly from the official Qude Framework database.
-
-## 🤝 Contribution
-We welcome contributions! To get started:
-
-- Fork the repository.
-- Create a new branch (feature/my-feature).
-- Make your changes and commit them.
-- Open a pull request.
