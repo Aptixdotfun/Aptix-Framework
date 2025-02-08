@@ -1,5 +1,5 @@
 
-![Logo] (https://media.discordapp.net/attachments/1333920253532569601/1333988510171926589/shdfghfdsg.png?ex=67a8bcdd&is=67a76b5d&hm=a88726545f41f5516774f094d356c67dd7f28e4912f06b237abb30faf85a8c16&=&format=webp&quality=lossless&width=960&height=191)
+![Logo](https://media.discordapp.net/attachments/1333920253532569601/1333988510171926589/shdfghfdsg.png?ex=67a8bcdd&is=67a76b5d&hm=a88726545f41f5516774f094d356c67dd7f28e4912f06b237abb30faf85a8c16&=&format=webp&quality=lossless&width=960&height=191)
 
 # AptixAI Agent Framework
 ##### The Aptix Framework open-source code allows users to create AI agents directly in their CLI, with Aptixbot acting as a co-pilot to help build them. The Aptix API enables interaction with the AI agents created using the Aptix Framework's open-source code.
