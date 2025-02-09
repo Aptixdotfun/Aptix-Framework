@@ -19,7 +19,7 @@ from Aptixbot.core import logger
 
 from typing import Union
 
-@star.register(name="Aptixbot", desc="AptixBot 基础指令结合 + 拓展功能", author="Aptix", version="4.0.0")
+@star.register(name="Aptixbot", desc="AptixBot 基础指令结合 + 拓展功能", author="Aptix", version="4.0.0") 
 class Main(star.Star):
     def __init__(self, context: star.Context) -> None:
         self.context = context
