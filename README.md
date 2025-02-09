@@ -138,10 +138,10 @@ The project utilizes the following development dependencies:
 #### The framework comes with several npm scripts for ease of use:
 
 - `npm run build`: Transpile TypeScript to JavaScript.
-- `npm run askqude`: Ask general questions to your AI agents.
-- `npm run deployqude`: Deploy a new agent to the Solana blockchain.
-- `npm run interactqude`: Interact with deployed agents using queries.
-- `npm run qude-trade`: Trade tokens on solana blockchain.
+- `npm run askaptixbot`: Ask general questions to your AI agents.
+- `npm run deployaptixbot`: Deploy a new agent to the Solana blockchain.
+- `npm run interactaptixbot`: Interact with deployed agents using queries.
+- `npm run aptixbot-trade`: Trade tokens on solana blockchain.
 
 ## 🔧 How It Works
 - Firebase Integration: Provides secure storage and retrieval of agent-related data.
