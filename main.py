@@ -11,19 +11,20 @@ from Aptixbot.core.utils.io import download_dashboard, get_dashboard_version
 # add parent path to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# ASCII art logo for Aptix Framework
 logo_tmpl = r"""
-     ___           _______.___________..______      .______     ______   .___________.
-    /   \         /       |           ||   _  \     |   _  \   /  __  \  |           |
-   /  ^  \       |   (----`---|  |----`|  |_)  |    |  |_)  | |  |  |  | `---|  |----`
-  /  /_\  \       \   \       |  |     |      /     |   _  <  |  |  |  |     |  |     
- /  _____  \  .----)   |      |  |     |  |\  \----.|  |_)  | |  `--'  |     |  |     
-/__/     \__\ |_______/       |__|     | _| `._____||______/   \______/      |__|     
-                                                                                    
+     ___           _______..___________. __     __   __  
+    /   \         /       ||           ||  |   |  | |  | 
+   /  ^  \       |   (----``---|  |----`|  |   |  | |  | 
+  /  /_\  \       \   \        |  |     |  |   |  | |  | 
+ /  _____  \  .----)   |       |  |     |  `---'  | |  | 
+/__/     \__\ |_______/        |__|      \______/  |__| 
+                                                       
 """
 
 def check_env():
     if not (sys.version_info.major == 3 and sys.version_info.minor >= 10):
-        logger.error("请使用 Python3.10+ 运行本项目。")
+        logger.error("Please use Python 3.10+ to run this project.")
         exit()
         
     os.makedirs("data/config", exist_ok=True)
@@ -36,31 +37,31 @@ def check_env():
     mimetypes.add_type("application/json", ".json")
     
 async def check_dashboard_files():
-    '''下载管理面板文件'''
+    '''Download dashboard files'''
 
     v = await get_dashboard_version()
     if v is not None:
         # has file
         if v == f"v{VERSION}":
-            logger.info("管理面板文件已是最新。")
+            logger.info("Dashboard files are up to date.")
         else:
-            logger.warning("检测到管理面板有更新。可以使用 /dashboard_update 命令更新。")
+            logger.warning("Dashboard update detected. Use /dashboard_update command to update.")
         return
     
-    logger.info("开始下载管理面板文件...高峰期（晚上）可能导致较慢的速度。如多次下载失败，请前往 https://github.com/Aptix/AptixBot/releases/latest 下载 dist.zip，并将其中的 dist 文件夹解压至 data 目录下。")
+    logger.info("Starting to download dashboard files... This may be slower during peak hours (evenings). If download fails multiple times, please visit https://github.com/Aptix/AptixBot/releases/latest to download dist.zip, and extract the dist folder to the data directory.")
     
     try:
         await download_dashboard()
     except Exception as e:
-        logger.critical(f"下载管理面板文件失败: {e}。")
+        logger.critical(f"Failed to download dashboard files: {e}")
         return
 
-    logger.info("管理面板下载完成。")
+    logger.info("Dashboard download completed successfully.")
 
 if __name__ == "__main__":
     check_env()
     
-    # start log broker
+    # start log broker with secure configuration
     log_broker = LogBroker()
     LogManager.set_queue_handler(logger, log_broker)
     
