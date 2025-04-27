@@ -1,16 +1,52 @@
 swagger: "2.0"
 info:
-  title: "qudebe-backend"
-  description: "API Gateway for Qude Backend"
-  version: "1.0.0"
-host: "qudebe-backend-gateway-1093v6at.uc.gateway.dev"
+  title: "Aptix Backend API"
+  description: "API Gateway for Aptix Framework Backend Services"
+  version: "1.2.4"
+  contact:
+    name: "Aptix Support"
+    url: "https://www.aptix.fun/support"
+    email: "support@aptix.fun"
+host: "api.aptix.fun"
+basePath: "/v1"
 schemes:
   - https
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    name: "x-api-key"
+    in: "header"
+  bearer:
+    type: "apiKey"
+    name: "Authorization"
+    in: "header"
+security:
+  - api_key: []
 paths:
-  /check-agent/{agentName}:
+  /health:
     get:
-      summary: "Check if an agent exists"
-      operationId: "checkAgent"
+      summary: "API health check"
+      description: "Returns health status of the API"
+      operationId: "healthCheck"
+      responses:
+        "200":
+          description: "API is healthy"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "string"
+                example: "healthy"
+              version:
+                type: "string"
+                example: "1.2.4"
+      security: []
+      
+  /agents/{agentName}:
+    get:
+      summary: "Get agent details"
+      description: "Retrieve details of a specific agent by name"
+      operationId: "getAgent"
       parameters:
         - name: "agentName"
           in: "path"
@@ -19,14 +55,31 @@ paths:
       responses:
         "200":
           description: "Successful response"
+          schema:
+            type: "object"
+            properties:
+              name:
+                type: "string"
+              personality:
+                type: "string"
+              capabilities:
+                type: "array"
+                items:
+                  type: "string"
+              created:
+                type: "string"
+                format: "date-time"
+        "404":
+          description: "Agent not found"
         "403":
           description: "Forbidden"
       x-google-backend:
-        address: "https://qudebe-backend-78914853029.us-central1.run.app"
+        address: "https://api.aptix.fun/backend"
 
-  /store-agent:
+  /agents:
     post:
-      summary: "Store agent details"
+      summary: "Create or update agent"
+      description: "Store agent details to create a new agent or update an existing one"
       operationId: "storeAgent"
       parameters:
         - name: "body"
@@ -37,12 +90,54 @@ paths:
             properties:
               agentName:
                 type: "string"
+                example: "Aura"
               agentDetails:
                 type: "object"
       responses:
+        "201":
+          description: "Agent created successfully"
+        "200":
+          description: "Agent updated successfully"
+        "400":
+          description: "Invalid request"
+        "403":
+          description: "Forbidden"
+      security:
+        - api_key: []
+        - bearer: []
+      x-google-backend:
+        address: "https://api.aptix.fun/backend"
+        
+  /agents/{agentName}/interact:
+    post:
+      summary: "Interact with an agent"
+      description: "Send a message to an agent and receive a response"
+      operationId: "interactWithAgent"
+      parameters:
+        - name: "agentName"
+          in: "path"
+          required: true
+          type: "string"
+        - name: "body"
+          in: "body"
+          required: true
+          schema:
+            type: "object"
+            properties:
+              message:
+                type: "string"
+                example: "What's the current market cap of Solana?"
+      responses:
         "200":
           description: "Successful response"
+          schema:
+            type: "object"
+            properties:
+              reply:
+                type: "string"
+        "404":
+          description: "Agent not found"
         "403":
           description: "Forbidden"
       x-google-backend:
-        address: "https://qudebe-backend-78914853029.us-central1.run.app"
+        address: "https://api.aptix.fun/backend"
