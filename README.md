@@ -1,52 +1,70 @@
-
 ![Logo](https://media.discordapp.net/attachments/1333920253532569601/1333988510171926589/shdfghfdsg.png?ex=67a8bcdd&is=67a76b5d&hm=a88726545f41f5516774f094d356c67dd7f28e4912f06b237abb30faf85a8c16&=&format=webp&quality=lossless&width=960&height=191)
 
 # AptixAI Agent Framework
-##### The Aptix Framework open-source code allows users to create AI agents directly in their CLI, with Aptixbot acting as a co-pilot to help build them. The Aptix API enables interaction with the AI agents created using the Aptix Framework's open-source code.
+
+> A powerful, secure framework for creating and deploying AI agents on the Solana blockchain.
+
+[![Version](https://img.shields.io/badge/version-1.2.4-blue.svg)](https://github.com/aptixdotfun/aptix-framework)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/typescript-%5E5.7.3-blue)](https://www.typescriptlang.org/)
+[![Solana](https://img.shields.io/badge/solana-blockchain-purple)](https://solana.com)
+
+The Aptix Framework enables developers to create AI agents directly in their CLI, with Aptixbot acting as a co-pilot to help build them. The comprehensive API allows seamless interaction with AI agents created using this framework.
 
 ### 🌟 Key Features
-- Agent Deployment: Deploy custom AI agents onto the Solana blockchain.
-- Agent Interaction: Use natural language queries to interact with deployed agents.
-- Market Analysis: Fetch real-time blockchain data, including market cap, top token holders, and trading activity
-- Trend Insights: Discover trending tokens and analyze trading patterns.
-- Custom Queries: Execute powerful custom queries for advanced data analysis.
-- Bitquery Integration: Seamlessly integrates with Bitquery APIs to fetch blockchain data.
+- **Agent Deployment**: Deploy custom AI agents onto the Solana blockchain.
+- **Agent Interaction**: Use natural language queries to interact with deployed agents.
+- **Market Analysis**: Fetch real-time blockchain data, including market cap, top token holders, and trading activity.
+- **Trend Insights**: Discover trending tokens and analyze trading patterns.
+- **Custom Queries**: Execute powerful custom queries for advanced data analysis.
+- **Bitquery Integration**: Seamlessly integrates with Bitquery APIs to fetch blockchain data.
 
-### 🛠 Framework Capabilities:
-- Token Interaction: Query token metrics such as market cap and top holders.
-- Trading Analysis: Identify trending tokens and analyze transaction data.
-- Customizable Commands: Easily define custom scripts for agent interaction and deployment.
-- Cross-Platform: Fully compatible with modern Node.js environments.
+### 🛠 Framework Capabilities
+- **Token Interaction**: Query token metrics such as market cap and top holders.
+- **Trading Analysis**: Identify trending tokens and analyze transaction data.
+- **Customizable Commands**: Easily define custom scripts for agent interaction and deployment.
+- **Cross-Platform**: Fully compatible with modern Node.js environments.
 
 ## 🚀 Quick Start
 ### Prerequisites
 - Node.js (>= 16.x)
 - npm (or yarn) installed
 - A valid Bitquery API key
-- read .env.example for rest of the Prerequisites
+- Solana CLI tools (optional, for advanced usage)
+- See `.env.example` for additional requirements
 
 ### Installation 
 1. Clone the repository
-``` bash 
+```bash 
 git clone https://github.com/aptixdotfun/aptix-framework.git
 cd aptix-framework
 ```
 2. Install dependencies:
-``` bash
+```bash
 npm install
 ```
-3. Set up environment variables: Create a .env file in the root directory and add the following variables:
+3. Set up environment variables: Create a `.env` file in the root directory and add the following variables:
  
 ```bash
 PRIVATE_KEYPAIR=<YOUR_PRIVATE_KEYPAIR>
 OPENAI_API_KEY=<YOUR_OPENAI_API_KEY> 
 RPC_ENDPOINT=https://api.mainnet-beta.solana.com 
-Add your Bitquery API in interactAgent.ts 
+BITQUERY_API_KEY=<YOUR_BITQUERY_API_KEY>
 ```
 4. Build the Framework
 ```bash
 npm run build
 ```
+
+## 🔒 Security Considerations
+
+When using the Aptix Framework, please follow these security best practices:
+
+- Never commit your `.env` file or any credentials to version control
+- Rotate your API keys regularly
+- Use separate keypairs for development and production environments
+- Implement rate limiting for production deployments
+- Review the [Security Guidelines](SECURITY.md) for more information
 
 ## 📜 Available Commands
 1. Ask Queries to an Agent:
@@ -142,9 +160,18 @@ The project utilizes the following development dependencies:
 - `npm run deployqude`: Deploy a new agent to the Solana blockchain.
 - `npm run interactqude`: Interact with deployed agents using queries.
 - `npm run aptixbot-trade`: Trade tokens on solana blockchain.
+- `npm run dev`: Watch for file changes and rebuild automatically.
+- `npm run lint`: Lint TypeScript files for code quality.
+- `npm run test`: Run test suite.
 
 ## 🔧 How It Works
-- Firebase Integration: Provides secure storage and retrieval of agent-related data.
-- Bitquery Integration: Fetches real-time and historical blockchain data for queries.
-- Command Parsing: Processes user commands to route them to the appropriate functionality.
-- Customizable Framework: Modify or extend the framework to suit your specific needs.
+- **Firebase Integration**: Provides secure storage and retrieval of agent-related data.
+- **Bitquery Integration**: Fetches real-time and historical blockchain data for queries.
+- **Command Parsing**: Processes user commands to route them to the appropriate functionality.
+- **Customizable Framework**: Modify or extend the framework to suit your specific needs.
+
+## 🤝 Contributing
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for more details.
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
