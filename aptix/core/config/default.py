@@ -1,5 +1,5 @@
 """
-如需修改配置，请在 `data/cmd_config.json` 中修改或者在管理面板中可视化修改。
+To modify the configuration, please edit the `data/cmd_config.json` file or use the visual editor in the dashboard.
 """
 
 VERSION = "3.4.21"
@@ -76,7 +76,7 @@ DEFAULT_CONFIG = {
     "http_proxy": "",
     "dashboard": {
         "enable": True,
-        "username": "Aptixbot",
+        "username": "admin",
         "password": "77b90590a8945a7d36c963981a307dc9",
     },
     "platform": [],
@@ -240,7 +240,7 @@ CONFIG_METADATA_2 = {
                     "forward_threshold": {
                         "description": "转发消息的字数阈值",
                         "type": "int",
-                        "hint": "超过一定字数后，机器人会将消息折叠成 QQ 群聊的 “转发消息”，以防止刷屏。目前仅 QQ 平台适配器适用。",
+                        "hint": "超过一定字数后，机器人会将消息折叠成 QQ 群聊的 "转发消息"，以防止刷屏。目前仅 QQ 平台适配器适用。",
                     },
                     "enable_id_white_list": {
                         "description": "启用 ID 白名单",

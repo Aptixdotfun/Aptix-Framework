@@ -51,11 +51,11 @@ npm run build
 ## 📜 Available Commands
 1. Ask Queries to an Agent:
 ```bash
-npm run askaptixbot {agentName} {yourQuestion}
+npm run askqude {agentName} {yourQuestion}
 ```
    - example
    ```bash
-   npm run askaptixbot Aura "What is the market cap of Solana?"
+   npm run askqude Aura "What is the market cap of Solana?"
 ```
 2. Deploy an Agent or Token:
 - Go to defineAgent.ts and replace placeholders as you want. 
@@ -64,45 +64,45 @@ npm run askaptixbot {agentName} {yourQuestion}
 npm run build 
 ```
 ```bash
-npm run deployaptixbot
+npm run deployqude
 ```
 - Deploys a new agent or token to the Solana blockchain.
 
 3. Interact with an Agent:
 ```bash
-npm run interactaptixbot {agent_name} ask "Your question"
+npm run interactqude {agent_name} ask "Your question"
 ```
 - Example 
 ```bash
-npm run interactaptixbot Aura ask "Trending token 24h"
+npm run interactqude Aura ask "Trending token 24h"
 ```
 4. Fetch Trending Tokens:
 ```bash 
-npm run interactaptixbot Aura ask "Trending token 24h"
+npm run interactqude Aura ask "Trending token 24h"
 ```
 5. Fetch Top Token Holders:
 ```bash
-npm run interactaptixbot Aura ask "Top holders: {mintAddress}"
+npm run interactqude Aura ask "Top holders: {mintAddress}"
 ```
 - Example 
 ```bash
-npm run interactaptixbot Aura ask "Top holders: 6LKbpcg2fQ84Ay3kKXVyo3bHUGe3s36g9EVbKYSupump"
+npm run interactqude Aura ask "Top holders: 6LKbpcg2fQ84Ay3kKXVyo3bHUGe3s36g9EVbKYSupump"
 ```
 6. Fetch Market Cap Data:
 ```bash
-npm run interactaptixbot Aura ask "Marketcap count:{count} term:\"{term}\""
+npm run interactqude Aura ask "Marketcap count:{count} term:\"{term}\""
 ``` 
 - Example
 ```bash
-npm run interactaptixbot Aura ask "Marketcap count:50 term:\"pump\""
+npm run interactqude Aura ask "Marketcap count:50 term:\"pump\""
 ```
 7. Fetch First Top Buyers:
 ```bash
-npm run interactaptixbot {agentName} ask "First top {count} buyers for: {mintAddress}"
+npm run interactqude {agentName} ask "First top {count} buyers for: {mintAddress}"
 ```
 - Example 
 ```bash 
-npm run interactaptixbot Aura ask "First top 10 buyers for: 6LKbpcg2fQ84Ay3kKXVyo3bHUGe3s36g9EVbKYSupump"
+npm run interactqude Aura ask "First top 10 buyers for: 6LKbpcg2fQ84Ay3kKXVyo3bHUGe3s36g9EVbKYSupump"
 ```
 8. Trade tokens
 ```bash 
@@ -138,9 +138,9 @@ The project utilizes the following development dependencies:
 #### The framework comes with several npm scripts for ease of use:
 
 - `npm run build`: Transpile TypeScript to JavaScript.
-- `npm run askaptixbot`: Ask general questions to your AI agents.
-- `npm run deployaptixbot`: Deploy a new agent to the Solana blockchain.
-- `npm run interactaptixbot`: Interact with deployed agents using queries.
+- `npm run askqude`: Ask general questions to your AI agents.
+- `npm run deployqude`: Deploy a new agent to the Solana blockchain.
+- `npm run interactqude`: Interact with deployed agents using queries.
 - `npm run aptixbot-trade`: Trade tokens on solana blockchain.
 
 ## 🔧 How It Works

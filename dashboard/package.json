@@ -1,8 +1,8 @@
 {
-  "name": "astrbot-dashboard",
-  "version": "1.0.0",
+  "name": "aptix-framework-dashboard",
+  "version": "1.0.1",
   "private": true,
-  "author": "CodedThemes",
+  "author": "Aptix Framework Team (based on CodedThemes template)",
   "scripts": {
     "dev": "vite --host",
     "build": "vue-tsc --noEmit && vite build",

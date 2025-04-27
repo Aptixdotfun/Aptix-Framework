@@ -1,3 +1,8 @@
+"""
+Logging utilities for the Aptix Framework.
+Provides colored logging and log broadcasting capabilities.
+"""
+
 import logging
 import colorlog
 import asyncio
@@ -19,7 +24,7 @@ class LogBroker:
         self.subscribers: List[Queue] = []
     
     def register(self) -> Queue:
-        '''给每个订阅者返回一个带有日志缓存的队列'''
+        '''Returns a queue with log cache for each subscriber'''
         q = Queue(maxsize=CACHED_SIZE + 10)
         for log in self.log_cache:
             q.put_nowait(log)
@@ -27,11 +32,11 @@ class LogBroker:
         return q
     
     def unregister(self, q: Queue):
-        '''取消订阅'''
+        '''Unsubscribe from logs'''
         self.subscribers.remove(q)
         
     def publish(self, log_entry: str):
-        '''发布消息'''
+        '''Publish a message to all subscribers'''
         self.log_cache.append(log_entry)
         for q in self.subscribers:
             try:

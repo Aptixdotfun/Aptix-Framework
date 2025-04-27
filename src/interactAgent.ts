@@ -3,9 +3,9 @@ import { checkAgentExists } from "./firebase.js"; // Backend-based Firebase inte
 import { getAgentData } from "./firebase.js";
 
 
-
+// Bitquery API configuration - replace with your API key from https://bitquery.io/
 const BITQUERY_API_URL = "https://streaming.bitquery.io/eap";
-const BITQUERY_API_KEY = "YOUR_API_KEY";
+const BITQUERY_API_KEY = "ADD_YOUR_BITQUERY_API_KEY_HERE";
 
 interface TokenSupplyUpdate {
   Marketcap: string;

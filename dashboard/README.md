@@ -1,3 +1,3 @@
-# AptixBot 管理面板
+# Aptix Framework Dashboard
 
-基于 CodedThemes/Berry 模板开发。
+Dashboard developed based on the CodedThemes/Berry template. Provides management interface for Aptix AI agents.

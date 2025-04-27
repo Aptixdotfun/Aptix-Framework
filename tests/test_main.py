@@ -10,6 +10,11 @@ class _version_info():
         self.minor = minor
         
 def test_check_env(monkeypatch):
+    """
+    Test the check_env function to ensure it:
+    1. Creates required directories when Python version is correct
+    2. Exits when Python version is incorrect
+    """
     version_info_correct = _version_info(3, 10)
     version_info_wrong = _version_info(3, 9)
     monkeypatch.setattr(sys, 'version_info', version_info_correct)
@@ -25,6 +30,11 @@ def test_check_env(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_check_dashboard_files(monkeypatch):
+    """
+    Test the check_dashboard_files function to ensure it:
+    1. Downloads dashboard files when they don't exist
+    2. Extracts the downloaded zip file correctly
+    """
     monkeypatch.setattr(os.path, 'exists', lambda x: False)
     async def mock_get(*args, **kwargs):
         class MockResponse:

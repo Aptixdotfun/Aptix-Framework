@@ -12,9 +12,9 @@ from bs4 import BeautifulSoup
 from .engines import HEADERS, USER_AGENTS
 
 
-@star.register(name="Aptixbot-web-searcher", desc="让 LLM 具有网页检索能力", author="Aptix", version="1.14.514")
+@star.register(name="Aptixbot-web-searcher", desc="Enable web search capabilities for LLM", author="Aptix", version="1.14.514")
 class Main(star.Star):
-    '''使用 /websearch on 或者 off 开启或者关闭网页搜索功能'''
+    '''Use /websearch on or off to enable or disable web search functionality'''
     def __init__(self, context: star.Context) -> None:
         self.context = context
         
@@ -34,11 +34,11 @@ class Main(star.Star):
             self.context.deactivate_llm_tool("fetch_url")
         
     async def _tidy_text(self, text: str) -> str:
-        '''清理文本，去除空格、换行符等'''
+        '''Clean text by removing spaces, line breaks, etc.'''
         return text.strip().replace("\n", " ").replace("\r", " ").replace("  ", " ")
         
     async def _get_from_url(self, url: str) -> str:
-        '''获取网页内容'''
+        '''Get content from webpage'''
         header = HEADERS
         header.update({'User-Agent': random.choice(USER_AGENTS)})
         async with aiohttp.ClientSession(trust_env=True) as session:
@@ -54,8 +54,8 @@ class Main(star.Star):
     async def websearch(self, event: AptixMessageEvent, oper: str = None) -> str:
         websearch = self.context.get_config()['provider_settings']['web_search']
         if oper is None:
-            status = "开启" if websearch else "关闭"
-            event.set_result(MessageEventResult().message("当前网页搜索功能状态：" + status + "。使用 /websearch on 或者 off 启用或者关闭。"))
+            status = "enabled" if websearch else "disabled"
+            event.set_result(MessageEventResult().message("Current web search status: " + status + ". Use /websearch on or off to enable or disable."))
             return
         
         if oper == "on":
@@ -63,15 +63,15 @@ class Main(star.Star):
             self.context.get_config().save_config()
             self.context.activate_llm_tool("web_search")
             self.context.activate_llm_tool("fetch_url")
-            event.set_result(MessageEventResult().message("已开启网页搜索功能"))
+            event.set_result(MessageEventResult().message("Web search functionality enabled"))
         elif oper == "off":
             self.context.get_config()['provider_settings']['web_search'] = False
             self.context.get_config().save_config()
             self.context.deactivate_llm_tool("web_search")
             self.context.deactivate_llm_tool("fetch_url")
-            event.set_result(MessageEventResult().message("已关闭网页搜索功能"))
+            event.set_result(MessageEventResult().message("Web search functionality disabled"))
         else:
-            event.set_result(MessageEventResult().message("操作参数错误，应为 on 或 off"))
+            event.set_result(MessageEventResult().message("Invalid operation parameter, should be on or off"))
             
     @llm_tool("web_search")
     async def search_from_search_engine(self, event: AptixMessageEvent, query: str) -> str:
